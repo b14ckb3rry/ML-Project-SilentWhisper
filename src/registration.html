@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SilentWhispers | Register</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="min-h-screen bg-white text-purple-700">
+
+    <!-- Navbar -->
+    <header class="w-full bg-white shadow-sm">
+        <nav class="max-w-7xl mx-auto flex items-center justify-between px-6 py-4">
+            <h1 class="text-2xl font-bold text-purple-700">
+                <a href="index.html">SilentWhispers</a>
+            </h1>
+            <div class="flex items-center gap-8 text-purple-600 font-medium">
+                <a href="translator.html">Translator</a>
+                <a href="about.html">About</a>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Register Section -->
+    <main
+        class="flex justify-center items-center min-h-screen bg-gradient-to-br from-blue-50 via-purple-100 to-pink-100">
+        <div class="w-full max-w-md bg-white p-8 rounded-lg shadow-lg">
+            <h2 class="text-3xl font-semibold text-purple-800 text-center mb-6">Register</h2>
+
+            <form id="registerForm">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium">Full Name</label>
+                    <input type="text" id="fullName" required class="w-full mt-2 p-3 border rounded-lg">
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-medium">Email</label>
+                    <input type="email" id="email" required class="w-full mt-2 p-3 border rounded-lg">
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-medium">Username</label>
+                    <input type="text" id="username" required class="w-full mt-2 p-3 border rounded-lg">
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-medium">Password</label>
+                    <input type="password" id="password" required class="w-full mt-2 p-3 border rounded-lg">
+                </div>
+
+                <div class="mb-6">
+                    <label class="block text-sm font-medium">Confirm Password</label>
+                    <input type="password" id="confirmPassword" required class="w-full mt-2 p-3 border rounded-lg">
+                </div>
+
+                <button type="submit" class="w-full bg-purple-600 text-white p-3 rounded-lg hover:bg-purple-700">
+                    Register
+                </button>
+            </form>
+
+            <div class="mt-6 text-center">
+                <button id="googleBtn"
+                    class="w-full bg-white border border-gray-300 text-gray-700 p-3 rounded-lg hover:bg-gray-100">
+                    Sign up with Google
+                </button>
+            </div>
+
+            <div class="text-center text-sm mt-4">
+                <a>Already have an Account?</a>
+                <a href="login.html" class="text-purple-600 hover:underline">Login Now</a>
+            </div>
+
+            <p id="message" class="text-center mt-4 text-red-500"></p>
+        </div>
+    </main>
+
+    <!-- Firebase Integration -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+        import {
+            getAuth,
+            createUserWithEmailAndPassword,
+            GoogleAuthProvider,
+            signInWithPopup,
+            updateProfile
+        } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBiB3oGz0iRkPnYBQPpAL_VuSc7iKMi47U",
+            authDomain: "user-login-system-758dc.firebaseapp.com",
+            projectId: "user-login-system-758dc",
+            storageBucket: "user-login-system-758dc.firebasestorage.app",
+            messagingSenderId: "918704461614",
+            appId: "1:918704461614:web:9dc1bfa1b7edc2da394cbf"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const provider = new GoogleAuthProvider();
+
+        const form = document.getElementById("registerForm");
+        const message = document.getElementById("message");
+
+        form.addEventListener("submit", async (e) => {
+            e.preventDefault();
+
+            const fullName = document.getElementById("fullName").value;
+            const email = document.getElementById("email").value;
+            const password = document.getElementById("password").value;
+            const confirmPassword = document.getElementById("confirmPassword").value;
+
+            if (password !== confirmPassword) {
+                message.textContent = "Passwords do not match!";
+                return;
+            }
+
+            try {
+                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                await updateProfile(userCredential.user, {
+                    displayName: fullName
+                });
+
+                alert("Registration successful!");
+                window.location.href = "login.html"; // change if needed
+
+            } catch (error) {
+                message.textContent = error.message;
+            }
+        });
+
+        document.getElementById("googleBtn").addEventListener("click", async () => {
+            try {
+                await signInWithPopup(auth, provider);
+                alert("Google sign-in successful!");
+                window.location.href = "login.html";
+            } catch (error) {
+                message.textContent = error.message;
+            }
+        });
+    </script>
+
+    <footer class="bg-white py-10">
+        <div class="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-4 gap-10">
+            <!-- Quick Links -->
+            <div>
+                <h3 class="text-xl font-semibold text-purple-600">QUICK LINKS</h3>
+                <ul class="mt-4 space-y-2">
+                    <li><a href="index.html" class="text-gray-600 hover:text-purple-600">Home</a></li>
+                    <li><a href="about.html" class="text-gray-600 hover:text-purple-600">About</a></li>
+                    <li><a href="#" class="text-gray-600 hover:text-purple-600">Features</a></li>
+                    <li><a href="#" class="text-gray-600 hover:text-purple-600">Contact</a></li>
+                </ul>
+            </div>
+
+            <!-- Support -->
+            <div>
+                <h3 class="text-xl font-semibold text-purple-600">SUPPORT</h3>
+                <ul class="mt-4 space-y-2">
+                    <li><a href="#" class="text-gray-600 hover:text-purple-600">Help Center</a></li>
+                    <li><a href="#" class="text-gray-600 hover:text-purple-600">Terms</a></li>
+                    <li><a href="#" class="text-gray-600 hover:text-purple-600">Privacy</a></li>
+                </ul>
+            </div>
+
+            <!-- Contact Info -->
+            <div>
+                <h3 class="text-xl font-semibold text-purple-600">CONTACT INFO</h3>
+                <ul class="mt-4 space-y-2">
+                    <li class="text-gray-600">+880 1708 503558 (Admission)</li>
+                    <li class="text-gray-600">info@bauet.ac.bd</li>
+                    <li class="text-gray-600">Qadirabad Cantonment, Dayarampur</li>
+                </ul>
+            </div>
+
+            <!-- Follow Us -->
+            <div>
+                <h3 class="text-xl font-semibold text-purple-600">FOLLOW US</h3>
+                <ul class="mt-4 space-y-2">
+                    <li><a href="#" class="text-gray-600 hover:text-purple-600">Facebook</a></li>
+                    <li><a href="#" class="text-gray-600 hover:text-purple-600">Twitter</a></li>
+                    <li><a href="#" class="text-gray-600 hover:text-purple-600">Instagram</a></li>
+                    <li><a href="#" class="text-gray-600 hover:text-purple-600">LinkedIn</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Footer bottom -->
+        <div class="text-center mt-10">
+            <p class="text-gray-600 text-sm">
+                © 2025 SilentWhispers | All rights reserved.
+            </p>
+        </div>
+    </footer>
+
+</body>
+
+</html>

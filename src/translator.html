@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>SilentWhispers | Translator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- MediaPipe Hands -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+</head>
+
+<body class="min-h-screen bg-gradient-to-br from-blue-50 via-purple-100 to-pink-100">
+
+<!-- ================= NAVBAR ================= -->
+<header class="bg-white shadow-sm">
+  <div class="max-w-7xl mx-auto flex justify-between items-center px-6 py-4">
+    <h1 class="text-2xl font-bold text-purple-700">
+      <a href="index.html">SilentWhispers</a>
+    </h1>
+
+    <nav class="flex items-center gap-6 text-purple-600 font-medium">
+      <!-- USER -->
+      <a id="userLink"
+         href="user.html"
+         class="hidden items-center gap-2 bg-purple-100 px-3 py-1 rounded-full">
+        <span id="userName" class="text-purple-700 font-medium"></span>
+      </a>
+    </nav>
+  </div>
+</header>
+
+<!-- ================= MAIN ================= -->
+<main class="max-w-7xl mx-auto px-6 py-10">
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+    <!-- CAMERA -->
+    <div class="bg-white rounded-2xl shadow-lg p-6">
+      <h2 class="text-xl font-semibold text-purple-700 mb-3">
+        Live Camera Feed
+      </h2>
+
+      <div class="relative h-72 sm:h-80 rounded-xl overflow-hidden bg-black">
+        <video id="video" class="w-full h-full object-cover" autoplay playsinline></video>
+        <canvas id="canvas" class="absolute inset-0"></canvas>
+
+        <div id="status"
+          class="absolute inset-0 flex items-center justify-center bg-purple-900/40 text-purple-200 italic">
+          Camera is off
+        </div>
+
+        <div id="fps"
+          class="absolute top-2 left-2 bg-black/60 text-white text-xs px-2 py-1 rounded">
+          FPS: 0
+        </div>
+      </div>
+
+      <div class="flex gap-4 mt-4">
+        <button onclick="startCamera()"
+          class="px-5 py-2 bg-purple-700 text-white rounded-lg hover:bg-purple-800">
+          Start Camera
+        </button>
+        <button onclick="stopCamera()"
+          class="px-5 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+          Stop Camera
+        </button>
+      </div>
+    </div>
+
+    <!-- TEXT OUTPUT -->
+    <div class="bg-white rounded-2xl shadow-lg p-6">
+      <h2 class="text-xl font-semibold text-purple-700 mb-3">
+        Translated Text
+      </h2>
+
+      <textarea id="output"
+        class="w-full h-72 sm:h-80 p-4 border rounded-xl resize-none focus:ring-2 focus:ring-purple-400"
+        placeholder="Translation output will appear here..."
+        readonly></textarea>
+
+      <button onclick="speakText()"
+        class="mt-4 px-5 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
+        🔊 Speak
+      </button>
+    </div>
+
+  </div>
+</main>
+
+<!-- ================= TRANSLATOR LOGIC ================= -->
+<script>
+const video = document.getElementById("video");
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+const statusText = document.getElementById("status");
+const output = document.getElementById("output");
+const fpsEl = document.getElementById("fps");
+
+let lastTime = performance.now();
+let frameCount = 0;
+let camera;
+
+// FPS
+function updateFPS() {
+  frameCount++;
+  const now = performance.now();
+  if (now - lastTime >= 1000) {
+    fpsEl.textContent = "FPS: " + frameCount;
+    frameCount = 0;
+    lastTime = now;
+  }
+}
+
+// TEXT TO SPEECH
+function speakText() {
+  if (!output.value) return;
+  speechSynthesis.speak(new SpeechSynthesisUtterance(output.value));
+}
+
+// CAMERA CONTROL
+function startCamera() {
+  statusText.classList.add("hidden");
+
+  camera = new Camera(video, {
+    onFrame: async () => {
+      await hands.send({ image: video });
+      updateFPS();
+    },
+    width: 640,
+    height: 480
+  });
+
+  camera.start();
+}
+
+function stopCamera() {
+  if (camera) camera.stop();
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  output.value = "";
+  statusText.classList.remove("hidden");
+}
+
+// MEDIAPIPE HANDS
+const hands = new Hands({
+  locateFile: file =>
+    `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+});
+
+hands.setOptions({
+  maxNumHands: 1,
+  modelComplexity: 1,
+  minDetectionConfidence: 0.7,
+  minTrackingConfidence: 0.7
+});
+
+hands.onResults(async results => {
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  if (results.multiHandLandmarks) {
+    for (const lm of results.multiHandLandmarks) {
+      drawConnectors(ctx, lm, HAND_CONNECTIONS, { color: "#7c3aed" });
+      drawLandmarks(ctx, lm, { color: "#c084fc", radius: 4 });
+
+      const word = await classifyGestureML(lm);
+      if (word) output.value = word;
+    }
+  }
+});
+
+// SIMPLE DEMO SIGN LOGIC (10 signs expandable)
+async function classifyGestureML(lm) {
+  const landmarks = [];
+
+  // Collect x,y,z → 63 features
+  for (let i = 0; i < 21; i++) {
+    landmarks.push(lm[i].x);
+    landmarks.push(lm[i].y);
+    landmarks.push(lm[i].z);
+  }
+
+  const res = await fetch("http://127.0.0.1:5000/predict", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ landmarks })
+  });
+
+  const data = await res.json();
+  return data.prediction;
+}
+</script>
+
+<!-- ================= FIREBASE AUTH (USERNAME + PROTECT) ================= -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+  import { getAuth, onAuthStateChanged } from
+    "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBiB3oGz0iRkPnYBQPpAL_VuSc7iKMi47U",
+    authDomain: "user-login-system-758dc.firebaseapp.com",
+    projectId: "user-login-system-758dc",
+    storageBucket: "user-login-system-758dc.appspot.com",
+    messagingSenderId: "918704461614",
+    appId: "1:918704461614:web:9dc1bfa1b7edc2da394cbf"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+
+  const userName = document.getElementById("userName");
+  const userLink = document.getElementById("userLink");
+
+
+  
+  onAuthStateChanged(auth, (user) => {
+    if (!user) {
+      window.location.href = "login.html";
+      return;
+    }
+
+    userLink.classList.remove("hidden");
+    userName.textContent =
+      user.displayName || user.email.split("@")[0];
+  });
+  
+</script>
+
+</body>
+</html>

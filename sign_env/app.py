@@ -11,14 +11,11 @@ with open("model_xyz.p", "rb") as f:
     model = pickle.load(f)["model"]
 
 THRESHOLD = 0.50  # confidence threshold
-
 @app.route("/predict", methods=["POST"])
 def predict():
     data = request.json
     landmarks = data["landmarks"]  # 63 values (x,y,z)
-
     X = np.array(landmarks).reshape(1, -1)
-
     # Predict probabilities
     probs = model.predict_proba(X)[0]
     max_prob = float(np.max(probs))
@@ -34,6 +31,6 @@ def predict():
         "prediction": str(pred_class),
         "confidence": max_prob
     })
-
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
+
